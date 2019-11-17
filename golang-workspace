@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Script to create a go workspace, and set up a hello world package
+# with a build system
+
+set -euo pipefail
+
+BASE=~/p
+
+main() {
+  local readonly workspace=$1
+  local readonly dir=${BASE}/${workspace}
+  mkdir -p ${dir}/{bin,pkg,src}
+  create_env_file ${dir}/.env
+  create_hello_package ${dir}
+  (cd ${dir}; git init)
+}
+
+create_env_file() {
+  local readonly envfile=$1
+  echo "export GOPATH=$(dirname ${envfile})" > ${envfile}
+}
+
+create_hello_package() {
+  local readonly workspace=$1
+  local readonly pkg_dir=${workspace}/src/hello
+
+  create_go_source ${pkg_dir}
+  create_makefile ${workspace}
+}
+
+create_go_source() {
+  local readonly pkg_dir=$1
+
+  mkdir -p ${pkg_dir}
+
+  cat <<EOF > ${pkg_dir}/hello.go
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, world")
+}
+EOF
+}
+
+create_makefile() {
+  local readonly workspace=$1
+
+  cat <<EOF > ${workspace}/makefile
+build:
+	. .env; go install hello
+
+clean:
+	. .env; go clean -i hello
+
+run: build
+	bin/hello
+
+.PHONY: clean build run
+EOF
+}
+
+main $1
